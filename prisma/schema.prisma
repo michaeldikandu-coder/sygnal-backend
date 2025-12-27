@@ -1,0 +1,302 @@
+// This is your Prisma schema file for PostgreSQL
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String   @id @default(cuid())
+  email            String   @unique
+  name             String
+  handle           String   @unique
+  avatar           String?
+  verified         Boolean  @default(false)
+  credibilityScore Float    @default(50.0)
+  accuracy         Float    @default(0.0)
+  accountAge       Int      @default(0) // days since registration
+  dailyPoints      Int      @default(100) // spendable mana, resets daily
+  streak           Int      @default(0)
+  passwordHash     String
+  refreshToken     String?
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  lastLogin        DateTime?
+  lastPointsReset  DateTime @default(now())
+
+  // Relations
+  signals          Signal[]
+  convictions      Conviction[]
+  challengesCreated Challenge[] @relation("ChallengerChallenges")
+  challengesReceived Challenge[] @relation("TargetChallenges")
+  comments         Comment[]
+  notifications    Notification[]
+  
+  // Follow system
+  followers        Follow[] @relation("UserFollowers")
+  following        Follow[] @relation("UserFollowing")
+  
+  // Analytics
+  credibilityHistory CredibilityHistory[]
+  achievements     UserAchievement[]
+  
+  @@map("users")
+}
+
+model Signal {
+  id               String    @id @default(cuid())
+  userId           String
+  content          String
+  topic            String?
+  category         String
+  timeframe        String?
+  consensus        Float     @default(50.0) // 0-100
+  momentum         Float     @default(0.0)
+  participantCount Int       @default(0)
+  
+  // Remix functionality
+  parentId         String?
+  isRemix          Boolean   @default(false)
+  
+  // Resolution
+  resolvedAt       DateTime?
+  resolvedValue    Float?    // Final outcome for accuracy calculation
+  
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // Relations
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent           Signal?   @relation("SignalRemixes", fields: [parentId], references: [id])
+  remixes          Signal[]  @relation("SignalRemixes")
+  
+  convictions      Conviction[]
+  challenges       Challenge[]
+  comments         Comment[]
+  thesis           Thesis[]
+  notifications    Notification[]
+  shares           Share[]
+  
+  @@map("signals")
+}
+
+model Conviction {
+  id        String   @id @default(cuid())
+  signalId  String
+  userId    String
+  value     Float    // -100 to 100 (confidence in direction)
+  weight    Float    @default(1.0) // based on user credibility
+  points    Int      // points spent on this conviction
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  signal    Signal   @relation(fields: [signalId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([signalId, userId])
+  @@map("convictions")
+}
+
+model Challenge {
+  id          String        @id @default(cuid())
+  signalId    String
+  challengerId String
+  targetId    String?       // null for open challenges
+  stakeAmount Int
+  status      ChallengeStatus @default(PENDING)
+  winnerId    String?
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  resolvedAt  DateTime?
+
+  // Relations
+  signal      Signal        @relation(fields: [signalId], references: [id], onDelete: Cascade)
+  challenger  User          @relation("ChallengerChallenges", fields: [challengerId], references: [id], onDelete: Cascade)
+  target      User?         @relation("TargetChallenges", fields: [targetId], references: [id], onDelete: Cascade)
+  
+  @@map("challenges")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  signalId  String
+  userId    String
+  content   String
+  parentId  String?  // for nested comments
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  signal    Signal   @relation(fields: [signalId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent    Comment? @relation("CommentReplies", fields: [parentId], references: [id])
+  replies   Comment[] @relation("CommentReplies")
+  
+  @@map("comments")
+}
+
+model Thesis {
+  id       String @id @default(cuid())
+  signalId String
+  url      String
+  title    String
+  source   String
+  imageUrl String?
+  clicks   Int    @default(0)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  signal   Signal @relation(fields: [signalId], references: [id], onDelete: Cascade)
+  
+  @@map("thesis")
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  
+  createdAt   DateTime @default(now())
+
+  // Relations
+  follower    User     @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@map("follows")
+}
+
+model Share {
+  id       String @id @default(cuid())
+  signalId String
+  userId   String
+  platform String? // twitter, linkedin, etc.
+  
+  createdAt DateTime @default(now())
+
+  // Relations
+  signal   Signal @relation(fields: [signalId], references: [id], onDelete: Cascade)
+  
+  @@map("shares")
+}
+
+model Notification {
+  id         String           @id @default(cuid())
+  userId     String
+  type       NotificationType
+  title      String
+  message    String
+  read       Boolean          @default(false)
+  
+  // Polymorphic relations
+  signalId   String?
+  challengeId String?
+  fromUserId String?
+  
+  createdAt  DateTime         @default(now())
+
+  // Relations
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  signal     Signal?          @relation(fields: [signalId], references: [id], onDelete: Cascade)
+  
+  @@map("notifications")
+}
+
+model CredibilityHistory {
+  id       String @id @default(cuid())
+  userId   String
+  score    Float
+  change   Float
+  reason   String
+  date     DateTime @default(now())
+
+  // Relations
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("credibility_history")
+}
+
+model Achievement {
+  id          String @id @default(cuid())
+  name        String @unique
+  description String
+  icon        String
+  category    String
+  points      Int    @default(0)
+  
+  createdAt   DateTime @default(now())
+
+  // Relations
+  users       UserAchievement[]
+  
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String @id @default(cuid())
+  userId        String
+  achievementId String
+  unlockedAt    DateTime @default(now())
+
+  // Relations
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}
+
+model Topic {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  category  String
+  trending  Boolean  @default(false)
+  momentum  Float    @default(0.0)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("topics")
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  color       String?
+  icon        String?
+  
+  createdAt   DateTime @default(now())
+  
+  @@map("categories")
+}
+
+enum ChallengeStatus {
+  PENDING
+  ACCEPTED
+  RESOLVED
+  CANCELLED
+}
+
+enum NotificationType {
+  FOLLOW
+  CONVICTION
+  CHALLENGE_REQUEST
+  CHALLENGE_ACCEPTED
+  CHALLENGE_RESOLVED
+  COMMENT
+  REMIX
+  ACHIEVEMENT
+}
