@@ -21,7 +21,7 @@ async function bootstrap() {
 
   // Enable CORS
   const allowedOrigins = process.env.NODE_ENV === 'production'
-    ? (process.env.FRONTEND_URLS || 'https://yourdomain.com').split(',')
+    ? (process.env.FRONTEND_URLS || 'https://sygnal.vercel.app').split(',')
     : [
         'http://localhost:3000',
         'http://localhost:3001', 
@@ -30,6 +30,7 @@ async function bootstrap() {
         'http://localhost:8080', // Vue default
         'http://127.0.0.1:3000',
         'http://127.0.0.1:5173',
+        'https://sygnal.vercel.app', // Production frontend
       ];
 
   app.enableCors({
