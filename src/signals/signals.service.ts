@@ -48,6 +48,24 @@ export class SignalsService {
 
     const where: any = {};
 
+    // Add data freshness filter - only show signals from last 30 days by default
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    where.createdAt = {
+      gte: thirtyDaysAgo, // Only signals from last 30 days
+    };
+
+    // For resolved signals, only show if resolved within last 7 days
+    where.OR = [
+      { resolvedAt: null }, // Unresolved signals
+      { 
+        resolvedAt: {
+          gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) // Resolved within 7 days
+        }
+      }
+    ];
+
     if (category) {
       where.category = category;
     }

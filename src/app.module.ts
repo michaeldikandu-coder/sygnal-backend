@@ -24,6 +24,7 @@ import { FeedsModule } from './feeds/feeds.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { HealthModule } from './health/health.module';
 import { TestModule } from './test/test.module';
+import { PolymarketModule } from './polymarket/polymarket.module';
 
 @Module({
   imports: [
@@ -76,6 +77,7 @@ import { TestModule } from './test/test.module';
     SchedulerModule,
     HealthModule,
     TestModule,
+    PolymarketModule,
   ],
 })
 export class AppModule {}

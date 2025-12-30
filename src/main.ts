@@ -91,6 +91,9 @@ async function bootstrap() {
     .addTag('Categories', 'Content categories and trending topics')
     .addTag('Credibility', 'Credibility scoring and reputation system')
     .addTag('Achievements', 'Gamification system and user achievements')
+    .addTag('Polymarket', 'Polymarket prediction markets integration')
+    .addTag('Health', 'System health checks and monitoring')
+    .addTag('Test', 'Development and testing endpoints')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
