@@ -8,7 +8,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
   const configService = app.get(ConfigService);
-  const port = configService.get('PORT') || 3000;
+  const port = configService.get('PORT') || process.env.PORT || 3000;
 
   // Global validation pipe
   app.useGlobalPipes(
@@ -118,11 +118,12 @@ async function bootstrap() {
     ],
   });
 
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   console.log(`🚀 Sygnal Backend running on port ${port}`);
   console.log(`📚 Swagger docs available at http://localhost:${port}/api/docs`);
   console.log(`📡 CORS enabled for: ${allowedOrigins.join(', ')}`);
   console.log(`🔗 API available at: http://localhost:${port}/api`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
 }
 
 bootstrap();

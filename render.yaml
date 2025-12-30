@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: sygnal-backend
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build && npx prisma generate
+    startCommand: npm run start:prod
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        value: postgres://3e740a0a5154cde4b2b7d5e99f6986bf539948d1334f17e46efe51edb19727ab:sk_Als61pswyoS40jknlfHQo@db.prisma.io:5432/postgres?sslmode=require
+      - key: JWT_SECRET
+        generateValue: true
+      - key: REFRESH_TOKEN_SECRET
+        generateValue: true
+      - key: PORT
+        value: 3000
+      - key: FRONTEND_URLS
+        value: https://sygnal.vercel.app
+      - key: REDIS_HOST
+        value: localhost
+      - key: REDIS_PORT
+        value: 6379
+      - key: THROTTLE_TTL
+        value: 60
+      - key: THROTTLE_LIMIT
+        value: 10
+      - key: CACHE_TTL
+        value: 300

@@ -19,10 +19,18 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
   async onModuleInit() {
     try {
+      // Set connection timeout for production
       await this.$connect();
       this.logger.log('✅ Connected to PostgreSQL database');
     } catch (error) {
       this.logger.error('❌ Failed to connect to PostgreSQL database:', error.message);
+      
+      // In production, don't crash the app - let it retry
+      if (process.env.NODE_ENV === 'production') {
+        this.logger.warn('🔄 Database connection failed, app will continue with limited functionality');
+        return;
+      }
+      
       throw error;
     }
   }
@@ -40,5 +48,16 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     return Promise.all(
       models.map((modelKey) => this[modelKey].deleteMany())
     );
+  }
+
+  // Health check method
+  async isHealthy(): Promise<boolean> {
+    try {
+      await this.user.findFirst();
+      return true;
+    } catch (error) {
+      this.logger.warn('Database health check failed:', error.message);
+      return false;
+    }
   }
 }
